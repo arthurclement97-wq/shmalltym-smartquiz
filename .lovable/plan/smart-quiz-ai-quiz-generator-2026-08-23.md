@@ -13,7 +13,7 @@ An app where students upload study material and get an AI-generated quiz, with a
 ## Quiz builder
 
 - Upload a PDF or image, or paste text. Drag-and-drop with file preview and size validation.
-- Number of questions (5–20 slider).
+- Number of questions (5–20 slider or custom ).
 - Question type: Multiple Choice (4 options) or True/False.
 - Optional timer: off, or a per-quiz countdown (e.g. 5/10/20 min).
 - Generate button with a clear loading state; AI failures (out of credits, rate limit, bad file) surface as readable messages.
