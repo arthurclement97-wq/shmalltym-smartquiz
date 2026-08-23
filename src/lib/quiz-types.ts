@@ -17,7 +17,7 @@ export interface AttemptAnswer {
   questionIndex: number;
   selectedIndex: number;
   correct: boolean;
-  explanation?: string;
+  explanation?: string | undefined;
 }
 
 export function scoreBand(percentage: number) {
