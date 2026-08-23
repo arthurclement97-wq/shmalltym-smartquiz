@@ -5,7 +5,7 @@ export interface QuizQuestion {
   question: string;
   options: string[];
   correctIndex: number;
-  sourceHint?: string;
+  sourceHint?: string | undefined;
 }
 
 export interface GeneratedQuiz {
