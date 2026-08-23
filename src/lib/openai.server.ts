@@ -5,10 +5,10 @@ const MODEL = "gpt-4o-mini";
 
 export interface MaterialInput {
   sourceType: "pdf" | "image" | "text";
-  text?: string;
-  fileName?: string;
-  fileMime?: string;
-  fileData?: string; // raw base64 (no data: prefix)
+  text?: string | undefined;
+  fileName?: string | undefined;
+  fileMime?: string | undefined;
+  fileData?: string | undefined; // raw base64 (no data: prefix)
 }
 
 type ContentBlock =
@@ -137,7 +137,7 @@ export async function explainQuestion(params: {
   options: string[];
   correctIndex: number;
   selectedIndex: number;
-  sourceHint?: string;
+  sourceHint?: string | undefined;
 }): Promise<string> {
   const content = await callOpenAI({
     temperature: 0.2,
