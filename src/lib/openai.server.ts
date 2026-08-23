@@ -1,0 +1,162 @@
+import type { QuestionType, QuizQuestion } from "./quiz-types";
+
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const MODEL = "gpt-4o-mini";
+
+export interface MaterialInput {
+  sourceType: "pdf" | "image" | "text";
+  text?: string;
+  fileName?: string;
+  fileMime?: string;
+  fileData?: string; // raw base64 (no data: prefix)
+}
+
+type ContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "file"; file: { filename: string; file_data: string } };
+
+function materialBlocks(material: MaterialInput): ContentBlock[] {
+  if (material.sourceType === "text") {
+    const text = (material.text ?? "").trim();
+    if (!text) throw new Error("No study material was provided.");
+    return [{ type: "text", text: `STUDY MATERIAL:\n\n${text.slice(0, 60000)}` }];
+  }
+
+  if (!material.fileData) throw new Error("The uploaded file could not be read.");
+  const mime = material.fileMime || (material.sourceType === "pdf" ? "application/pdf" : "image/png");
+  const dataUrl = `data:${mime};base64,${material.fileData}`;
+
+  if (material.sourceType === "image") {
+    return [
+      { type: "text", text: "STUDY MATERIAL is in the attached image." },
+      { type: "image_url", image_url: { url: dataUrl } },
+    ];
+  }
+
+  return [
+    { type: "text", text: "STUDY MATERIAL is in the attached document." },
+    { type: "file", file: { filename: material.fileName || "material.pdf", file_data: dataUrl } },
+  ];
+}
+
+async function callOpenAI(body: Record<string, unknown>) {
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) throw new Error("The AI service is not configured yet.");
+
+  const res = await fetch(OPENAI_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model: MODEL, ...body }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error("OpenAI error", res.status, detail);
+    if (res.status === 401) throw new Error("The AI key was rejected. Please check the OpenAI API key.");
+    if (res.status === 429)
+      throw new Error("The AI service is rate limited or out of quota. Try again shortly.");
+    if (res.status === 400)
+      throw new Error("The AI could not read this material. Try a clearer file or paste the text.");
+    throw new Error("The AI service is temporarily unavailable. Please try again.");
+  }
+
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
+export async function generateQuizFromMaterial(params: {
+  material: MaterialInput;
+  questionCount: number;
+  questionType: QuestionType;
+}): Promise<{ title: string; questions: QuizQuestion[] }> {
+  const { material, questionCount, questionType } = params;
+  const shape =
+    questionType === "mcq"
+      ? "Each question must have exactly 4 distinct answer options."
+      : 'Each question must have exactly 2 options: ["True", "False"].';
+
+  const content = await callOpenAI({
+    temperature: 0.3,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are Smart Quiz, an exam-setter for students. Build quizzes STRICTLY from the study material provided. " +
+          "Never invent facts that are not supported by the material. If the material is too short, produce fewer questions. " +
+          'Reply with JSON only, shaped as {"title": string, "questions": [{"question": string, "options": string[], "correctIndex": number, "sourceHint": string}]}. ' +
+          "sourceHint is a short quote or paraphrase from the material that proves the answer.",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Create ${questionCount} ${questionType === "mcq" ? "multiple choice" : "true/false"} questions. ${shape} Give the quiz a short descriptive title based on the material.`,
+          },
+          ...materialBlocks(material),
+        ],
+      },
+    ],
+  });
+
+  let parsed: { title?: string; questions?: QuizQuestion[] };
+  try {
+    parsed = JSON.parse(content) as { title?: string; questions?: QuizQuestion[] };
+  } catch {
+    throw new Error("The AI returned an unreadable quiz. Please try again.");
+  }
+
+  const questions = (parsed.questions ?? [])
+    .filter((q) => q && typeof q.question === "string" && Array.isArray(q.options))
+    .map((q) => ({
+      question: q.question,
+      options: q.options.map((o) => String(o)),
+      correctIndex:
+        Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < q.options.length
+          ? q.correctIndex
+          : 0,
+      sourceHint: typeof q.sourceHint === "string" ? q.sourceHint : undefined,
+    }))
+    .slice(0, questionCount);
+
+  if (questions.length === 0)
+    throw new Error("No questions could be generated from this material. Try richer content.");
+
+  return { title: parsed.title?.trim() || "Study Quiz", questions };
+}
+
+export async function explainQuestion(params: {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  selectedIndex: number;
+  sourceHint?: string;
+}): Promise<string> {
+  const content = await callOpenAI({
+    temperature: 0.2,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a friendly tutor. Explain in 2-4 short sentences why the correct answer is right and, if the student chose differently, why their choice is wrong. Base the explanation on the supplied material context. No markdown headings.",
+      },
+      {
+        role: "user",
+        content: `Question: ${params.question}
+Options: ${params.options.map((o, i) => `${i + 1}. ${o}`).join(" | ")}
+Correct answer: ${params.options[params.correctIndex]}
+Student answered: ${params.options[params.selectedIndex] ?? "no answer"}
+Material context: ${params.sourceHint ?? "n/a"}`,
+      },
+    ],
+  });
+
+  return content.trim() || "No explanation available right now.";
+}
