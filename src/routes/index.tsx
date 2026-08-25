@@ -107,7 +107,11 @@ function HomePage() {
       return;
     }
     if (mode === "text" && text.trim().length < 40) {
-      toast.error("Paste a bit more study material (at least a short paragraph).");
+      toast.error(
+        flow === "import"
+          ? "Paste the full questions (and options) from your paper."
+          : "Paste a bit more study material (at least a short paragraph).",
+      );
       return;
     }
     if (mode !== "text" && !file) {
