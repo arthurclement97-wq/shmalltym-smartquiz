@@ -244,7 +244,11 @@ function HomePage() {
                 <Textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Paste your notes, a chapter summary, or lecture text…"
+                  placeholder={
+                    flow === "import"
+                      ? "Type or paste the printed questions with their options (and the answer key if you have it)…"
+                      : "Paste your notes, a chapter summary, or lecture text…"
+                  }
                   className="mt-3 min-h-40"
                 />
               ) : file ? (
