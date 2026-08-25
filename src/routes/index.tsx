@@ -5,6 +5,7 @@ import {
   FileText,
   Image as ImageIcon,
   Loader2,
+  ScanLine,
   Sparkles,
   Timer,
   Type as TypeIcon,
@@ -20,7 +21,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { generateQuiz } from "@/lib/quiz.functions";
+import { generateQuiz, importQuiz } from "@/lib/quiz.functions";
 import type { QuestionType, SourceType } from "@/lib/quiz-types";
 import { cn } from "@/lib/utils";
 
