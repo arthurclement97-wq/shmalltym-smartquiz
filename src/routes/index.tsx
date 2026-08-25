@@ -279,9 +279,13 @@ function HomePage() {
                 >
                   <Upload className="size-5 text-muted-foreground" />
                   <span className="font-medium">
-                    Drop your {mode === "pdf" ? "PDF" : "image"} here or tap to browse
+                    {flow === "import"
+                      ? `Drop a ${mode === "pdf" ? "scanned paper (PDF)" : "photo of the paper"} here or tap to browse`
+                      : `Drop your ${mode === "pdf" ? "PDF" : "image"} here or tap to browse`}
                   </span>
-                  <span className="text-xs text-muted-foreground">Up to 8 MB</span>
+                  <span className="text-xs text-muted-foreground">
+                    {flow === "import" ? "Up to 8 MB — clear, well-lit pages read best" : "Up to 8 MB"}
+                  </span>
                 </button>
               )}
               <input
