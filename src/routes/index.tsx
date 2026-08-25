@@ -175,18 +175,49 @@ function HomePage() {
             <Sparkles className="size-3.5" /> AI quiz generator
           </span>
           <h1 className="mt-4 font-display text-3xl leading-tight font-bold tracking-tight sm:text-4xl">
-            Turn your study material into a quiz
+            {flow === "import" ? "Turn a hard copy paper into a quiz" : "Turn your study material into a quiz"}
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground sm:text-base">
-            Upload a PDF or a photo of your notes, or paste text. Smart Quiz asks questions strictly from
-            your own material.
+            {flow === "import"
+              ? "Snap or upload a printed past paper and Smart Quiz transcribes the questions exactly, then explains each answer as you play."
+              : "Upload a PDF or a photo of your notes, or paste text. Smart Quiz asks questions strictly from your own material."}
           </p>
         </section>
 
-        <Card className="mt-8 border-border/70 shadow-sm">
+        <div className="mt-7 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-1.5">
+          {(
+            [
+              { key: "generate" as const, label: "Generate from notes", icon: Sparkles },
+              { key: "import" as const, label: "Import hard copy", icon: ScanLine },
+            ]
+          ).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setFlow(key);
+                setFile(null);
+                setText("");
+              }}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                flow === key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <Card className="mt-4 border-border/70 shadow-sm">
           <CardContent className="space-y-7 py-6">
             <div>
-              <Label className="text-sm">Study material</Label>
+              <Label className="text-sm">
+                {flow === "import" ? "Question paper" : "Study material"}
+              </Label>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {modes.map(({ key, label, icon: Icon }) => (
                   <button
