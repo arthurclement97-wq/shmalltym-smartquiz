@@ -373,8 +373,20 @@ function HomePage() {
             </div>
 
             <Button className="w-full" size="lg" onClick={handleGenerate} disabled={busy || loading}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              {busy ? "Generating your quiz…" : "Generate quiz"}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : flow === "import" ? (
+                <ScanLine className="size-4" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {busy
+                ? flow === "import"
+                  ? "Reading your paper…"
+                  : "Generating your quiz…"
+                : flow === "import"
+                  ? "Import & convert paper"
+                  : "Generate quiz"}
             </Button>
 
             {!user && !loading && (
