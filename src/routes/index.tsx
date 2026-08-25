@@ -70,8 +70,10 @@ function HomePage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const generate = useServerFn(generateQuiz);
+  const runImport = useServerFn(importQuiz);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [flow, setFlow] = useState<"generate" | "import">("generate");
   const [mode, setMode] = useState<SourceType>("pdf");
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
