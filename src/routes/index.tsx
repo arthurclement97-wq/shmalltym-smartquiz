@@ -131,9 +131,10 @@ function HomePage() {
               fileData: await toBase64(file!),
             };
 
-      const quiz = await generate({
-        data: { ...payload, questionCount: count, questionType },
-      });
+      const quiz =
+        flow === "import"
+          ? await runImport({ data: { ...payload, maxQuestions: 50 } })
+          : await generate({ data: { ...payload, questionCount: count, questionType } });
 
       const { data: inserted, error } = await supabase
         .from("quizzes")
@@ -141,7 +142,7 @@ function HomePage() {
           user_id: user.id,
           title: quiz.title,
           source_type: mode,
-          question_type: questionType,
+          question_type: flow === "import" ? "imported" : questionType,
           question_count: quiz.questions.length,
           timer_seconds: timer > 0 ? timer : null,
           questions: quiz.questions as unknown as never,
