@@ -38,6 +38,32 @@ export const generateQuiz = createServerFn({ method: "POST" })
     });
   });
 
+const ImportInput = z.object({
+  sourceType: z.enum(["pdf", "image", "text"]),
+  text: z.string().optional(),
+  fileName: z.string().optional(),
+  fileMime: z.string().optional(),
+  fileData: z.string().optional(),
+  maxQuestions: z.number().int().min(1).max(50),
+});
+
+export const importQuiz = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ImportInput.parse(input))
+  .handler(async ({ data }) => {
+    const { importQuizFromPaper } = await import("./openai.server");
+    return importQuizFromPaper({
+      material: {
+        sourceType: data.sourceType,
+        text: data.text,
+        fileName: data.fileName,
+        fileMime: data.fileMime,
+        fileData: data.fileData,
+      },
+      maxQuestions: data.maxQuestions,
+    });
+  });
+
 export const explainAnswer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ExplainInput.parse(input))

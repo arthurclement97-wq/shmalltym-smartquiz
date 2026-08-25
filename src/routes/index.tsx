@@ -5,6 +5,7 @@ import {
   FileText,
   Image as ImageIcon,
   Loader2,
+  ScanLine,
   Sparkles,
   Timer,
   Type as TypeIcon,
@@ -20,7 +21,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { generateQuiz } from "@/lib/quiz.functions";
+import { generateQuiz, importQuiz } from "@/lib/quiz.functions";
 import type { QuestionType, SourceType } from "@/lib/quiz-types";
 import { cn } from "@/lib/utils";
 
@@ -69,8 +70,10 @@ function HomePage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const generate = useServerFn(generateQuiz);
+  const runImport = useServerFn(importQuiz);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [flow, setFlow] = useState<"generate" | "import">("generate");
   const [mode, setMode] = useState<SourceType>("pdf");
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
@@ -104,7 +107,11 @@ function HomePage() {
       return;
     }
     if (mode === "text" && text.trim().length < 40) {
-      toast.error("Paste a bit more study material (at least a short paragraph).");
+      toast.error(
+        flow === "import"
+          ? "Paste the full questions (and options) from your paper."
+          : "Paste a bit more study material (at least a short paragraph).",
+      );
       return;
     }
     if (mode !== "text" && !file) {
@@ -124,9 +131,10 @@ function HomePage() {
               fileData: await toBase64(file!),
             };
 
-      const quiz = await generate({
-        data: { ...payload, questionCount: count, questionType },
-      });
+      const quiz =
+        flow === "import"
+          ? await runImport({ data: { ...payload, maxQuestions: 50 } })
+          : await generate({ data: { ...payload, questionCount: count, questionType } });
 
       const { data: inserted, error } = await supabase
         .from("quizzes")
@@ -134,7 +142,7 @@ function HomePage() {
           user_id: user.id,
           title: quiz.title,
           source_type: mode,
-          question_type: questionType,
+          question_type: flow === "import" ? "imported" : questionType,
           question_count: quiz.questions.length,
           timer_seconds: timer > 0 ? timer : null,
           questions: quiz.questions as unknown as never,
@@ -167,18 +175,49 @@ function HomePage() {
             <Sparkles className="size-3.5" /> AI quiz generator
           </span>
           <h1 className="mt-4 font-display text-3xl leading-tight font-bold tracking-tight sm:text-4xl">
-            Turn your study material into a quiz
+            {flow === "import" ? "Turn a hard copy paper into a quiz" : "Turn your study material into a quiz"}
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground sm:text-base">
-            Upload a PDF or a photo of your notes, or paste text. Smart Quiz asks questions strictly from
-            your own material.
+            {flow === "import"
+              ? "Snap or upload a printed past paper and Smart Quiz transcribes the questions exactly, then explains each answer as you play."
+              : "Upload a PDF or a photo of your notes, or paste text. Smart Quiz asks questions strictly from your own material."}
           </p>
         </section>
 
-        <Card className="mt-8 border-border/70 shadow-sm">
+        <div className="mt-7 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-1.5">
+          {(
+            [
+              { key: "generate" as const, label: "Generate from notes", icon: Sparkles },
+              { key: "import" as const, label: "Import hard copy", icon: ScanLine },
+            ]
+          ).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setFlow(key);
+                setFile(null);
+                setText("");
+              }}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                flow === key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <Card className="mt-4 border-border/70 shadow-sm">
           <CardContent className="space-y-7 py-6">
             <div>
-              <Label className="text-sm">Study material</Label>
+              <Label className="text-sm">
+                {flow === "import" ? "Question paper" : "Study material"}
+              </Label>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {modes.map(({ key, label, icon: Icon }) => (
                   <button
@@ -205,7 +244,11 @@ function HomePage() {
                 <Textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Paste your notes, a chapter summary, or lecture text…"
+                  placeholder={
+                    flow === "import"
+                      ? "Type or paste the printed questions with their options (and the answer key if you have it)…"
+                      : "Paste your notes, a chapter summary, or lecture text…"
+                  }
                   className="mt-3 min-h-40"
                 />
               ) : file ? (
@@ -236,9 +279,13 @@ function HomePage() {
                 >
                   <Upload className="size-5 text-muted-foreground" />
                   <span className="font-medium">
-                    Drop your {mode === "pdf" ? "PDF" : "image"} here or tap to browse
+                    {flow === "import"
+                      ? `Drop a ${mode === "pdf" ? "scanned paper (PDF)" : "photo of the paper"} here or tap to browse`
+                      : `Drop your ${mode === "pdf" ? "PDF" : "image"} here or tap to browse`}
                   </span>
-                  <span className="text-xs text-muted-foreground">Up to 8 MB</span>
+                  <span className="text-xs text-muted-foreground">
+                    {flow === "import" ? "Up to 8 MB — clear, well-lit pages read best" : "Up to 8 MB"}
+                  </span>
                 </button>
               )}
               <input
@@ -250,46 +297,57 @@ function HomePage() {
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Number of questions</Label>
-                <span className="text-sm font-semibold tabular-nums text-primary">{count}</span>
-              </div>
-              <Slider
-                className="mt-3"
-                min={5}
-                max={20}
-                step={1}
-                value={[count]}
-                onValueChange={(v) => setCount(v[0] ?? 10)}
-              />
-            </div>
+            {flow === "import" ? (
+              <p className="rounded-xl border border-border/70 bg-muted px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                Questions and options are kept exactly as printed. If the paper has an answer key, Smart
+                Quiz uses it; otherwise it works out the answer and explains its reasoning when you tap
+                "Explain Answer".
+              </p>
+            ) : (
+              <>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Number of questions</Label>
+                    <span className="text-sm font-semibold tabular-nums text-primary">{count}</span>
+                  </div>
+                  <Slider
+                    className="mt-3"
+                    min={5}
+                    max={20}
+                    step={1}
+                    value={[count]}
+                    onValueChange={(v) => setCount(v[0] ?? 10)}
+                  />
+                </div>
 
-            <div>
-              <Label className="text-sm">Question type</Label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {(
-                  [
-                    { key: "mcq" as QuestionType, label: "Multiple choice" },
-                    { key: "truefalse" as QuestionType, label: "True / False" },
-                  ]
-                ).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setQuestionType(key)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
-                      questionType === key
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card hover:bg-secondary",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <div>
+                  <Label className="text-sm">Question type</Label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        { key: "mcq" as QuestionType, label: "Multiple choice" },
+                        { key: "truefalse" as QuestionType, label: "True / False" },
+                      ]
+                    ).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setQuestionType(key)}
+                        className={cn(
+                          "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
+                          questionType === key
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card hover:bg-secondary",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
 
             <div>
               <Label className="flex items-center gap-1.5 text-sm">
@@ -315,8 +373,20 @@ function HomePage() {
             </div>
 
             <Button className="w-full" size="lg" onClick={handleGenerate} disabled={busy || loading}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              {busy ? "Generating your quiz…" : "Generate quiz"}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : flow === "import" ? (
+                <ScanLine className="size-4" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {busy
+                ? flow === "import"
+                  ? "Reading your paper…"
+                  : "Generating your quiz…"
+                : flow === "import"
+                  ? "Import & convert paper"
+                  : "Generate quiz"}
             </Button>
 
             {!user && !loading && (

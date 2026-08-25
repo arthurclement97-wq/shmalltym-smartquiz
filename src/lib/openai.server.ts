@@ -132,6 +132,71 @@ export async function generateQuizFromMaterial(params: {
   return { title: parsed.title?.trim() || "Study Quiz", questions };
 }
 
+export async function importQuizFromPaper(params: {
+  material: MaterialInput;
+  maxQuestions: number;
+}): Promise<{ title: string; questions: QuizQuestion[] }> {
+  const { material, maxQuestions } = params;
+
+  const content = await callOpenAI({
+    temperature: 0,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are Smart Quiz's paper importer. The supplied material is a HARD COPY question paper (scan, photo, PDF or typed text). " +
+          "Transcribe the existing questions EXACTLY as written — do not invent new questions and do not reword them. " +
+          "Keep every answer option in its original order and wording (strip leading labels like 'A.' or '1)'). " +
+          "If the paper includes an answer key, marked answers, or a stated solution, use it for correctIndex. " +
+          "If no answer is indicated, work out the correct option yourself and say so in sourceHint. " +
+          "Skip essay or open-ended questions that have no options, and skip True/False questions' missing options by using [\"True\",\"False\"]. " +
+          'Reply with JSON only, shaped as {"title": string, "questions": [{"question": string, "options": string[], "correctIndex": number, "sourceHint": string}]}. ' +
+          "sourceHint is a short note on where the answer came from (answer key, marked script, or your reasoning).",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Transcribe up to ${maxQuestions} questions from this question paper into quiz format. Title the quiz using the paper's own heading if there is one.`,
+          },
+          ...materialBlocks(material),
+        ],
+      },
+    ],
+  });
+
+  let parsed: { title?: string; questions?: QuizQuestion[] };
+  try {
+    parsed = JSON.parse(content) as { title?: string; questions?: QuizQuestion[] };
+  } catch {
+    throw new Error("The AI returned an unreadable quiz. Please try again.");
+  }
+
+  const questions = (parsed.questions ?? [])
+    .filter(
+      (q) => q && typeof q.question === "string" && Array.isArray(q.options) && q.options.length >= 2,
+    )
+    .map((q) => ({
+      question: q.question,
+      options: q.options.map((o) => String(o)),
+      correctIndex:
+        Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < q.options.length
+          ? q.correctIndex
+          : 0,
+      sourceHint: typeof q.sourceHint === "string" ? q.sourceHint : undefined,
+    }))
+    .slice(0, maxQuestions);
+
+  if (questions.length === 0)
+    throw new Error(
+      "No questions could be read from this paper. Try a clearer scan, or paste the questions as text.",
+    );
+
+  return { title: parsed.title?.trim() || "Imported Question Paper", questions };
+}
+
 export async function explainQuestion(params: {
   question: string;
   options: string[];
