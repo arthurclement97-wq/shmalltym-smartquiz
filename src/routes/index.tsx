@@ -297,46 +297,57 @@ function HomePage() {
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Number of questions</Label>
-                <span className="text-sm font-semibold tabular-nums text-primary">{count}</span>
-              </div>
-              <Slider
-                className="mt-3"
-                min={5}
-                max={20}
-                step={1}
-                value={[count]}
-                onValueChange={(v) => setCount(v[0] ?? 10)}
-              />
-            </div>
+            {flow === "import" ? (
+              <p className="rounded-xl border border-border/70 bg-muted px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                Questions and options are kept exactly as printed. If the paper has an answer key, Smart
+                Quiz uses it; otherwise it works out the answer and explains its reasoning when you tap
+                "Explain Answer".
+              </p>
+            ) : (
+              <>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Number of questions</Label>
+                    <span className="text-sm font-semibold tabular-nums text-primary">{count}</span>
+                  </div>
+                  <Slider
+                    className="mt-3"
+                    min={5}
+                    max={20}
+                    step={1}
+                    value={[count]}
+                    onValueChange={(v) => setCount(v[0] ?? 10)}
+                  />
+                </div>
 
-            <div>
-              <Label className="text-sm">Question type</Label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {(
-                  [
-                    { key: "mcq" as QuestionType, label: "Multiple choice" },
-                    { key: "truefalse" as QuestionType, label: "True / False" },
-                  ]
-                ).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setQuestionType(key)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
-                      questionType === key
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card hover:bg-secondary",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <div>
+                  <Label className="text-sm">Question type</Label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        { key: "mcq" as QuestionType, label: "Multiple choice" },
+                        { key: "truefalse" as QuestionType, label: "True / False" },
+                      ]
+                    ).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setQuestionType(key)}
+                        className={cn(
+                          "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
+                          questionType === key
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card hover:bg-secondary",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
 
             <div>
               <Label className="flex items-center gap-1.5 text-sm">
