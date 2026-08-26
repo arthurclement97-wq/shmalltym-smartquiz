@@ -6,7 +6,7 @@ export const GenerateInput = z.object({
   fileName: z.string().optional(),
   fileMime: z.string().optional(),
   fileData: z.string().optional(),
-  questionCount: z.number().int().min(1).max(30),
+  questionCount: z.number().int().min(1).max(150),
   questionType: z.enum(["mcq", "truefalse"]),
 });
 
@@ -16,7 +16,7 @@ export const ImportInput = z.object({
   fileName: z.string().optional(),
   fileMime: z.string().optional(),
   fileData: z.string().optional(),
-  maxQuestions: z.number().int().min(1).max(50),
+  maxQuestions: z.number().int().min(1).max(150),
 });
 
 export const ExplainInput = z.object({
