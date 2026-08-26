@@ -1,7 +1,9 @@
 import type { QuestionType, QuizQuestion } from "./quiz-types";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "gpt-4o-mini";
+const FALLBACK_MODEL = "google/gemini-3-flash-preview";
 
 export interface MaterialInput {
   sourceType: "pdf" | "image" | "text";
@@ -42,23 +44,39 @@ function materialBlocks(material: MaterialInput): ContentBlock[] {
 
 async function callOpenAI(body: Record<string, unknown>) {
   const apiKey = process.env["OPENAI_API_KEY"];
-  if (!apiKey) throw new Error("The AI service is not configured yet.");
+  const lovableApiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey && !lovableApiKey) throw new Error("The AI service is not configured yet.");
 
-  const res = await fetch(OPENAI_URL, {
+  let res = await fetch(apiKey ? OPENAI_URL : LOVABLE_AI_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      ...(apiKey
+        ? { Authorization: `Bearer ${apiKey}` }
+        : { "Lovable-API-Key": String(lovableApiKey) }),
     },
-    body: JSON.stringify({ model: MODEL, ...body }),
+    body: JSON.stringify({ model: apiKey ? MODEL : FALLBACK_MODEL, ...body }),
   });
+
+  if (apiKey && lovableApiKey && (res.status === 429 || res.status >= 500)) {
+    console.warn("OpenAI unavailable; using the managed AI fallback", res.status);
+    res = await fetch(LOVABLE_AI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": lovableApiKey,
+      },
+      body: JSON.stringify({ model: FALLBACK_MODEL, ...body }),
+    });
+  }
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    console.error("OpenAI error", res.status, detail);
-    if (res.status === 401) throw new Error("The AI key was rejected. Please check the OpenAI API key.");
-    if (res.status === 429)
-      throw new Error("The AI service is rate limited or out of quota. Try again shortly.");
+    console.error("Quiz AI error", res.status, detail);
+    if (res.status === 401) throw new Error("The AI service is not configured correctly.");
+    if (res.status === 402 || res.status === 403)
+      throw new Error("AI generation is unavailable until the app's AI credits are topped up.");
+    if (res.status === 429) throw new Error("The AI service is busy. Please wait a moment and try again.");
     if (res.status === 400)
       throw new Error("The AI could not read this material. Try a clearer file or paste the text.");
     throw new Error("The AI service is temporarily unavailable. Please try again.");
