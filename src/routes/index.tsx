@@ -16,8 +16,8 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -133,7 +133,7 @@ function HomePage() {
 
       const quiz =
         flow === "import"
-          ? await runImport({ data: { ...payload, maxQuestions: 50 } })
+          ? await runImport({ data: { ...payload, maxQuestions: count } })
           : await generate({ data: { ...payload, questionCount: count, questionType } });
 
       const { data: inserted, error } = await supabase
@@ -297,55 +297,62 @@ function HomePage() {
               />
             </div>
 
-            {flow === "import" ? (
+            {flow === "import" && (
               <p className="rounded-xl border border-border/70 bg-muted px-4 py-3 text-xs leading-relaxed text-muted-foreground">
                 Questions and options are kept exactly as printed. If the paper has an answer key, Smart
                 Quiz uses it; otherwise it works out the answer and explains its reasoning when you tap
                 "Explain Answer".
               </p>
-            ) : (
-              <>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Number of questions</Label>
-                    <span className="text-sm font-semibold tabular-nums text-primary">{count}</span>
-                  </div>
-                  <Slider
-                    className="mt-3"
-                    min={5}
-                    max={20}
-                    step={1}
-                    value={[count]}
-                    onValueChange={(v) => setCount(v[0] ?? 10)}
-                  />
-                </div>
+            )}
 
-                <div>
-                  <Label className="text-sm">Question type</Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        { key: "mcq" as QuestionType, label: "Multiple choice" },
-                        { key: "truefalse" as QuestionType, label: "True / False" },
-                      ]
-                    ).map(({ key, label }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setQuestionType(key)}
-                        className={cn(
-                          "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
-                          questionType === key
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-card hover:bg-secondary",
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">
+                  {flow === "import" ? "Maximum questions to import" : "Number of questions"}
+                </Label>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={150}
+                  value={count}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    setCount(Number.isNaN(parsed) ? 1 : Math.max(1, Math.min(150, parsed)));
+                  }}
+                  className="max-w-24 text-center tabular-nums"
+                />
+                <span className="text-xs text-muted-foreground">1 – 150</span>
+              </div>
+            </div>
+
+            {flow === "generate" && (
+              <div>
+                <Label className="text-sm">Question type</Label>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { key: "mcq" as QuestionType, label: "Multiple choice" },
+                      { key: "truefalse" as QuestionType, label: "True / False" },
+                    ]
+                  ).map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setQuestionType(key)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
+                        questionType === key
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-card hover:bg-secondary",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              </>
+              </div>
             )}
 
 
