@@ -133,7 +133,7 @@ function HomePage() {
 
       const quiz =
         flow === "import"
-          ? await runImport({ data: { ...payload, maxQuestions: 50 } })
+          ? await runImport({ data: { ...payload, maxQuestions: count } })
           : await generate({ data: { ...payload, questionCount: count, questionType } });
 
       const { data: inserted, error } = await supabase
