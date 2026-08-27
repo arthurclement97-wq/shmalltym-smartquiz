@@ -77,9 +77,11 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_public: boolean
           question_count: number
           question_type: string
           questions: Json
+          share_token: string
           source_type: string
           timer_seconds: number | null
           title: string
@@ -88,9 +90,11 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_public?: boolean
           question_count: number
           question_type: string
           questions: Json
+          share_token?: string
           source_type: string
           timer_seconds?: number | null
           title: string
@@ -99,9 +103,11 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_public?: boolean
           question_count?: number
           question_type?: string
           questions?: Json
+          share_token?: string
           source_type?: string
           timer_seconds?: number | null
           title?: string
