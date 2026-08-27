@@ -26,3 +26,9 @@ export const ExplainInput = z.object({
   selectedIndex: z.number().int(),
   sourceHint: z.string().optional(),
 });
+
+export const ExplainSharedInput = z.object({
+  shareToken: z.string().uuid(),
+  questionIndex: z.number().int().min(0),
+  selectedIndex: z.number().int(),
+});
