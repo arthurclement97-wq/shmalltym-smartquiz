@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ExplainInput, GenerateInput, ImportInput } from "./quiz-schemas";
+import { ExplainInput, ExplainSharedInput, GenerateInput, ImportInput } from "./quiz-schemas";
+
 
 export const generateQuiz = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
