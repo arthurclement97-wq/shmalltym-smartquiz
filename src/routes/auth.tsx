@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,11 +29,14 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("signin");
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/" });
@@ -42,19 +45,24 @@ function AuthPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) {
       toast.error(error.message);
       return;
     }
+    if (!data.session || !data.user) {
+      toast.error("Sign-in could not be completed. Please try again.");
+      return;
+    }
+    await router.invalidate();
     navigate({ to: "/" });
   }
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -67,8 +75,17 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success("Account created — you're all set!");
-    navigate({ to: "/" });
+    if (data.session && data.user) {
+      toast.success("Account created — you're signed in!");
+      await router.invalidate();
+      navigate({ to: "/" });
+      return;
+    }
+
+    setConfirmationSent(true);
+    setTab("signin");
+    setPassword("");
+    toast.success("Account created. Check your email to confirm it, then sign in.");
   }
 
   return (
@@ -87,7 +104,12 @@ function AuthPage() {
             <CardDescription>Turn your notes into quizzes in seconds.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin">
+            {confirmationSent && (
+              <div className="mb-4 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+                Check your email and confirm your account before signing in.
+              </div>
+            )}
+            <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign in</TabsTrigger>
                 <TabsTrigger value="signup">Create account</TabsTrigger>

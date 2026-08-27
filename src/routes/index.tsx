@@ -102,7 +102,9 @@ function HomePage() {
   }
 
   async function handleGenerate() {
-    if (!user) {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (!user || authError || !authData.user) {
+      toast.error("Your session has expired. Please sign in again.");
       navigate({ to: "/auth" });
       return;
     }
@@ -121,15 +123,18 @@ function HomePage() {
 
     setBusy(true);
     try {
-      const payload =
-        mode === "text"
-          ? { sourceType: "text" as const, text }
-          : {
-              sourceType: mode,
-              fileName: file!.name,
-              fileMime: file!.type,
-              fileData: await toBase64(file!),
-            };
+      let payload;
+      if (mode === "text") {
+        payload = { sourceType: "text" as const, text };
+      } else {
+        if (!file) throw new Error("Please select your file again.");
+        payload = {
+          sourceType: mode,
+          fileName: file.name,
+          fileMime: file.type,
+          fileData: await toBase64(file),
+        };
+      }
 
       const quiz =
         flow === "import"
@@ -139,7 +144,7 @@ function HomePage() {
       const { data: inserted, error } = await supabase
         .from("quizzes")
         .insert({
-          user_id: user.id,
+          user_id: authData.user.id,
           title: quiz.title,
           source_type: mode,
           question_type: flow === "import" ? "imported" : questionType,
