@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { ShareQuizButton } from "@/components/ShareQuizButton";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
