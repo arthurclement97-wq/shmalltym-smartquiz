@@ -105,12 +105,17 @@ function ResultsPage() {
                   <RotateCcw className="size-4" /> Retake this quiz
                 </Link>
               </Button>
+              <ShareQuizButton quizId={quiz.id} title={quiz.title} variant="outline" />
               <Button asChild>
                 <Link to="/">
                   <Sparkles className="size-4" /> Generate another quiz
                 </Link>
               </Button>
             </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Sharing creates a link friends can play without signing in.
+            </p>
+
           </CardContent>
         </Card>
 
