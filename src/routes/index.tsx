@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
+import { GenerationProgress, estimateSeconds } from "@/components/GenerationProgress";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,6 +84,9 @@ function HomePage() {
   const [timer, setTimer] = useState(0);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [estimate, setEstimate] = useState(0);
+
+
 
   function pickFile(picked: File | undefined) {
     if (!picked) return;
@@ -121,7 +126,9 @@ function HomePage() {
       return;
     }
 
+    setEstimate(estimateSeconds(count, mode !== "text"));
     setBusy(true);
+
     try {
       let payload;
       if (mode === "text") {
@@ -173,6 +180,13 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
+      {busy && (
+        <GenerationProgress
+          estimate={estimate}
+          label={flow === "import" ? "Reading your paper…" : "Building your quiz…"}
+        />
+      )}
+
 
       <main className="mx-auto w-full max-w-2xl px-4 py-10">
         <section className="text-center">
