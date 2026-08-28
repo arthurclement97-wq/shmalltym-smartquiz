@@ -126,7 +126,9 @@ function HomePage() {
       return;
     }
 
+    setEstimate(estimateSeconds(count, mode !== "text"));
     setBusy(true);
+
     try {
       let payload;
       if (mode === "text") {
