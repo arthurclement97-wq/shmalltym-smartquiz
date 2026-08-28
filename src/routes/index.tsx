@@ -180,6 +180,13 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
+      {busy && (
+        <GenerationProgress
+          estimate={estimate}
+          label={flow === "import" ? "Reading your paper…" : "Building your quiz…"}
+        />
+      )}
+
 
       <main className="mx-auto w-full max-w-2xl px-4 py-10">
         <section className="text-center">
