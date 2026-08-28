@@ -82,8 +82,10 @@ function HomePage() {
   const [count, setCount] = useState(10);
   const [questionType, setQuestionType] = useState<QuestionType>("mcq");
   const [timer, setTimer] = useState(0);
+  const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [estimate, setEstimate] = useState(0);
+
 
 
   function pickFile(picked: File | undefined) {
